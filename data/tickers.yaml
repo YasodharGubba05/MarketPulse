@@ -1,0 +1,40 @@
+# Default stock universe — add tickers here; app and training load this file.
+# company_name is used for news/Twitter keyword queries.
+
+tickers:
+  - symbol: AAPL
+    company_name: Apple
+    sector: Tech
+  - symbol: MSFT
+    company_name: Microsoft
+    sector: Tech
+  - symbol: GOOGL
+    company_name: Google
+    sector: Tech
+  - symbol: NVDA
+    company_name: NVIDIA
+    sector: Tech
+  - symbol: TSLA
+    company_name: Tesla
+    sector: Automotive
+  - symbol: F
+    company_name: Ford
+    sector: Automotive
+  - symbol: JPM
+    company_name: JPMorgan
+    sector: Finance
+  - symbol: GS
+    company_name: Goldman Sachs
+    sector: Finance
+  - symbol: AMZN
+    company_name: Amazon
+    sector: Retail
+  - symbol: WMT
+    company_name: Walmart
+    sector: Retail
+  - symbol: META
+    company_name: Meta
+    sector: Tech
+  - symbol: NFLX
+    company_name: Netflix
+    sector: Entertainment
