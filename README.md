@@ -141,6 +141,4 @@ After training, open `metrics.json` to compare **per-ticker** regression/classif
 - Alternative text (SEC filings, Reddit) and entity-aware sentiment.
 - Deployment: batch Airflow jobs + model registry (MLflow).
 
-## License
 
-Educational use. Verify data provider terms (Yahoo Finance, Twitter/X) before production use.
