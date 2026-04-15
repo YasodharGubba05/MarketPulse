@@ -41,8 +41,7 @@ def predict_for_ticker(
     """
     Download fresh data, rebuild features, load saved regressors, return series for plots.
 
-    include_lstm: if True, loads TensorFlow or PyTorch LSTM (heavy; can crash some Streamlit setups).
-    use_transformer_sentiment: FinBERT path; keep False in the app for speed/stability (VADER only).
+    include_lstm: if True, loads TensorFlow or PyTorch LSTM.
     """
     ticker = ticker.upper().strip()
     universe = load_ticker_universe()
@@ -67,7 +66,12 @@ def predict_for_ticker(
 
     scaler_path = MODELS_DIR / f"scaler_reg_{ticker}.joblib"
     xgb_r_path = MODELS_DIR / f"xgb_reg_{ticker}.joblib"
+    lgb_r_path = MODELS_DIR / f"lgb_reg_{ticker}.joblib"
+    ens_r_path = MODELS_DIR / f"ens_reg_{ticker}.joblib"
     xgb_c_path = MODELS_DIR / f"xgb_clf_{ticker}.joblib"
+    lgb_c_path = MODELS_DIR / f"lgb_clf_{ticker}.joblib"
+    ens_c_path = MODELS_DIR / f"ens_clf_{ticker}.joblib"
+
     lstm_keras_path = MODELS_DIR / f"lstm_{ticker}.keras"
     lstm_torch_path = MODELS_DIR / f"lstm_{ticker}.pt"
     lstm_sc_path = MODELS_DIR / f"lstm_scaler_{ticker}.joblib"
@@ -78,18 +82,50 @@ def predict_for_ticker(
         )
 
     sc = joblib.load(scaler_path)
-    xgb_r = joblib.load(xgb_r_path)
-    xgb_c = joblib.load(xgb_c_path) if xgb_c_path.exists() else None
-
     X_all = sub[feat_cols].values
     X_s = sc.transform(X_all)
-    pred_price = xgb_r.predict(X_s)
+
+    # ──────────────────────────────────────────────────────────────────
+    # Regression Predictions
+    # ──────────────────────────────────────────────────────────────────
+    preds = {}
+    
+    xgb_r = joblib.load(xgb_r_path)
+    preds["xgb"] = xgb_r.predict(X_s)
+    
+    if lgb_r_path.exists():
+        lgb_r = joblib.load(lgb_r_path)
+        preds["lgb"] = lgb_r.predict(X_s)
+        
+    if ens_r_path.exists():
+        ens_r = joblib.load(ens_r_path)
+        preds["ensemble"] = ens_r.predict(X_s)
+
     actual_next = sub[REGRESSION_TARGET].values.astype(float)
 
-    crash_proba = None
-    if xgb_c is not None:
-        crash_proba = xgb_c.predict_proba(X_s)[:, 1]
+    # ──────────────────────────────────────────────────────────────────
+    # Classification Predictions (Crash Risk)
+    # ──────────────────────────────────────────────────────────────────
+    probs = {}
+    if xgb_c_path.exists():
+        xgb_c = joblib.load(xgb_c_path)
+        probs["xgb"] = xgb_c.predict_proba(X_s)[:, 1]
+    
+    if lgb_c_path.exists():
+        lgb_c = joblib.load(lgb_c_path)
+        probs["lgb"] = lgb_c.predict_proba(X_s)[:, 1]
 
+    if ens_c_path.exists():
+        ens_c = joblib.load(ens_c_path)
+        probs["ensemble"] = ens_c.predict_proba(X_s)[:, 1]
+
+    # Defaults for the UI
+    pred_price = preds.get("xgb")
+    crash_proba = probs.get("xgb")
+
+    # ──────────────────────────────────────────────────────────────────
+    # LSTM
+    # ──────────────────────────────────────────────────────────────────
     lstm_pred = None
     if include_lstm and lstm_sc_path.exists() and (lstm_keras_path.exists() or lstm_torch_path.exists()):
         seq_len = LSTM_SEQUENCE_LENGTH
@@ -102,12 +138,10 @@ def predict_for_ticker(
             try:
                 if lstm_keras_path.exists():
                     from src.models import load_keras_model
-
                     lstm = load_keras_model(lstm_keras_path)
                     lstm_pred = lstm.predict(X_seq_s, verbose=0).ravel()
                 else:
                     from src.models import load_torch_lstm, predict_lstm_torch
-
                     lstm, device, _ = load_torch_lstm(lstm_torch_path)
                     lstm_pred = predict_lstm_torch(lstm, X_seq_s, device)
             except Exception as e:
@@ -115,17 +149,31 @@ def predict_for_ticker(
 
     dates = sub["Date"].values
     actual = sub["Close"].values
+    
     out = {
         "dates": pd.to_datetime(dates),
         "actual_close": actual,
         "actual_next_close": actual_next,
+        
+        # New multi-model support
+        "preds": preds,
+        "probs": probs,
+        
+        # Back-compat fields for the UI forecast tab
         "predicted_next_close_xgb": pred_price,
-        "volatility_roll": sub["volatility_roll"].values,
-        "sentiment_mean": sub["sentiment_mean"].values,
         "crash_probability": crash_proba,
         "lstm_predicted": lstm_pred,
+        
+        # Indicators
+        "volatility_roll": sub["volatility_roll"].values,
+        "sentiment_mean": sub["sentiment_mean"].values,
+        "rsi": sub.get("rsi_14", pd.Series(np.nan, index=sub.index)).values,
+        "macd": sub.get("macd", pd.Series(np.nan, index=sub.index)).values,
+        "atr": sub.get("atr_14", pd.Series(np.nan, index=sub.index)).values,
+        "obv": sub.get("obv", pd.Series(np.nan, index=sub.index)).values,
+        
         "last_date": sub["Date"].iloc[-1],
-        "forecast_next_close_xgb": float(pred_price[-1]),
+        "forecast_next_close_xgb": float(pred_price[-1]) if pred_price is not None else 0.0,
         "crash_risk_now": float(crash_proba[-1]) if crash_proba is not None else None,
     }
     return out

@@ -1,4 +1,4 @@
-"""Metrics, cross-validation helpers, optional SHAP."""
+"""Metrics, cross-validation helpers, leaderboard, optional SHAP."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from sklearn.metrics import (
     accuracy_score,
     f1_score,
     mean_absolute_error,
+    mean_absolute_percentage_error,
     mean_squared_error,
     precision_score,
     r2_score,
@@ -27,7 +28,17 @@ def regression_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, floa
     rmse = float(np.sqrt(mean_squared_error(y_true, y_pred)))
     mae = float(mean_absolute_error(y_true, y_pred))
     r2 = float(r2_score(y_true, y_pred))
-    return {"RMSE": rmse, "MAE": mae, "R2": r2}
+    # MAPE — skip zero-targets to avoid division by zero
+    nz = y_true != 0
+    mape = float(mean_absolute_percentage_error(y_true[nz], y_pred[nz]) * 100) if nz.any() else float("nan")
+    # Directional accuracy — did pred direction match actual?
+    if len(y_true) > 1:
+        actual_dir = np.sign(np.diff(y_true))
+        pred_dir = np.sign(y_pred[1:] - y_true[:-1])
+        dir_acc = float(np.mean(actual_dir == pred_dir))
+    else:
+        dir_acc = float("nan")
+    return {"RMSE": rmse, "MAE": mae, "R2": r2, "MAPE_%": mape, "Dir_Acc": dir_acc}
 
 
 def classification_metrics(
@@ -90,3 +101,94 @@ def shap_summary(
     except Exception as e:
         logger.warning("SHAP not available or failed: %s", e)
         return None
+
+
+def shap_values_for_plot(
+    model: Any,
+    X_sample: np.ndarray,
+    feature_names: list[str],
+    max_samples: int = 300,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """
+    Returns (shap_values, X_sample) arrays for interactive plotting.
+    Returns None when SHAP is unavailable.
+    """
+    try:
+        import shap
+        X = np.asarray(X_sample)[:max_samples]
+        explainer = shap.TreeExplainer(model)
+        sv = explainer.shap_values(X)
+        return sv, X
+    except Exception as e:
+        logger.warning("SHAP values failed: %s", e)
+        return None
+
+
+def leaderboard_df(
+    per_ticker_metrics: dict[str, dict],
+    ticker: str,
+    metric: str = "RMSE",
+) -> pd.DataFrame:
+    """
+    Build a ranked leaderboard DataFrame for all regression models for a given ticker.
+
+    per_ticker_metrics: the metrics["per_ticker"] dict from metrics.json
+    Returns DataFrame with columns: model, RMSE, MAE, R2, MAPE_%, Dir_Acc
+    and sorted ascending by `metric`.
+    """
+    pt = per_ticker_metrics.get(ticker, {})
+    reg = pt.get("regression", {})
+    rows = []
+    for model_name, m in reg.items():
+        if model_name.endswith("_shap"):
+            continue
+        if not isinstance(m, dict):
+            continue
+        rows.append({
+            "Model": model_name.replace("_", " ").title(),
+            "RMSE": m.get("RMSE"),
+            "MAE": m.get("MAE"),
+            "R2": m.get("R2"),
+            "MAPE_%": m.get("MAPE_%"),
+            "Dir_Acc": m.get("Dir_Acc"),
+        })
+    # Add baselines
+    bh = pt.get("baselines_holdout", {})
+    for bl_name, bm in bh.items():
+        if isinstance(bm, dict):
+            rows.append({
+                "Model": f"[Baseline] {bl_name.replace('_', ' ').title()}",
+                "RMSE": bm.get("RMSE"),
+                "MAE": bm.get("MAE"),
+                "R2": bm.get("R2"),
+                "MAPE_%": bm.get("MAPE_%"),
+                "Dir_Acc": bm.get("Dir_Acc"),
+            })
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    if metric in df.columns:
+        df = df.sort_values(metric, na_position="last").reset_index(drop=True)
+    return df
+
+
+def classification_leaderboard_df(per_ticker_metrics: dict, ticker: str) -> pd.DataFrame:
+    """Build classification model leaderboard for crash detection."""
+    pt = per_ticker_metrics.get(ticker, {})
+    clf = pt.get("classification", {})
+    rows = []
+    for model_name, m in clf.items():
+        if not isinstance(m, dict):
+            continue
+        rows.append({
+            "Model": model_name.replace("_", " ").title(),
+            "Accuracy": m.get("accuracy"),
+            "Precision": m.get("precision"),
+            "Recall": m.get("recall"),
+            "F1": m.get("f1"),
+            "ROC-AUC": m.get("roc_auc"),
+        })
+    df = pd.DataFrame(rows)
+    if not df.empty and "F1" in df.columns:
+        df = df.sort_values("F1", ascending=False, na_position="last").reset_index(drop=True)
+    return df

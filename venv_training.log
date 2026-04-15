@@ -1,0 +1,65 @@
+2026-04-15 21:35:24,083 INFO train: ============================================================
+2026-04-15 21:35:24,083 INFO train: MarketPulse — ML Training Pipeline
+2026-04-15 21:35:24,083 INFO train:   Tickers: all | Lookback: default yrs | Sentiment: True
+2026-04-15 21:35:24,083 INFO train:   Optuna tuning: False | Walk-forward CV: True
+2026-04-15 21:35:24,083 INFO train: ============================================================
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/mlflow/tracking/_tracking_service/utils.py:184: FutureWarning: The filesystem tracking backend (e.g., './mlruns') is deprecated as of February 2026. Consider transitioning to a database backend (e.g., 'sqlite:///mlflow.db') to take advantage of the latest MLflow features. See https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store for migration guidance.
+  return FileStore(store_uri, store_uri)
+2026-04-15 21:35:24,587 INFO src.pipeline: Downloading OHLCV for ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'TSLA', 'F', 'JPM', 'GS', 'AMZN', 'WMT', 'META', 'NFLX']
+2026-04-15 21:35:27,479 INFO src.pipeline: [AAPL] GARCH volatility fit…
+2026-04-15 21:35:27,953 INFO src.pipeline: [AAPL] Linear Regression…
+2026-04-15 21:35:27,960 INFO src.pipeline: [AAPL] Random Forest Regressor…
+2026-04-15 21:35:28,253 INFO src.pipeline: [AAPL] XGBoost Regressor…
+2026-04-15 21:35:28,776 INFO src.pipeline: [AAPL] LightGBM Regressor…
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+2026-04-15 21:35:29,291 INFO src.pipeline: [AAPL] Stacking Ensemble Regressor…
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+2026-04-15 21:35:33,664 INFO src.pipeline: [AAPL] Logistic Regression (crash)…
+2026-04-15 21:35:33,677 INFO src.pipeline: [AAPL] Random Forest Classifier (crash)…
+2026-04-15 21:35:33,957 INFO src.pipeline: [AAPL] XGBoost Classifier (crash)…
+2026-04-15 21:35:34,161 INFO src.pipeline: [AAPL] LightGBM Classifier (crash)…
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+2026-04-15 21:35:34,536 INFO src.pipeline: [AAPL] Stacking Ensemble Classifier (crash)…
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+2026-04-15 21:35:37,384 INFO src.pipeline: [AAPL] Backtesting…
+2026-04-15 21:35:37,384 INFO src.pipeline: [AAPL] LSTM training…
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:359: UserWarning: resource_tracker: There appear to be 16 leaked semlock objects to clean up at shutdown
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:359: UserWarning: resource_tracker: There appear to be 8 leaked folder objects to clean up at shutdown
+  warnings.warn(
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_9b26b69f57764767b48901f0edbd24f5_ebaf589e42a54498868bd366bf063d7d: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_9b26b69f57764767b48901f0edbd24f5_38a3b3d47d664e65bb63a0f894b106dd: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_4c396f4f34f44939bc5337500d3c93f8_206bbddbf714456a8ebf5080b346281d: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_9b26b69f57764767b48901f0edbd24f5_311af320c8bd4341aafdbf6d1f94648e: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_2ed71e006d6545e1b7f80671bdf6c7b7_7137074af4df4e278ce02ee6534d80bc: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_9b26b69f57764767b48901f0edbd24f5_199c109c2de84254b71f457224cd40d2: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_fe54e10062bc4b56b69f7f77abe7607c_d5bdc99073304d0fb6f668dd77acc913: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Users/yasodhargubba/Desktop/ads-project/.venv/lib/python3.14/site-packages/joblib/externals/loky/backend/resource_tracker.py:375: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16651_9b26b69f57764767b48901f0edbd24f5_a65d1b7b25ab48118afc455d36d6ed2a: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")

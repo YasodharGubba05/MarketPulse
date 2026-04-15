@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit
 
 from src.baselines import mean_train_prediction, naive_persistence_prediction

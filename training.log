@@ -1,0 +1,129 @@
+2026-04-15 21:01:22,968 INFO train: ============================================================
+2026-04-15 21:01:22,968 INFO train: MarketPulse — ML Training Pipeline
+2026-04-15 21:01:22,968 INFO train:   Tickers: all | Lookback: default yrs | Sentiment: True
+2026-04-15 21:01:22,968 INFO train:   Optuna tuning: False | Walk-forward CV: True
+2026-04-15 21:01:22,968 INFO train: ============================================================
+/Applications/anaconda3/lib/python3.13/site-packages/pydantic/_internal/_fields.py:132: UserWarning: Field "model_name" in PromptModelConfig has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/mlflow/tracking/_tracking_service/utils.py:184: FutureWarning: The filesystem tracking backend (e.g., './mlruns') is deprecated as of February 2026. Consider transitioning to a database backend (e.g., 'sqlite:///mlflow.db') to take advantage of the latest MLflow features. See https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store for migration guidance.
+  return FileStore(store_uri, store_uri)
+2026-04-15 21:01:23,748 INFO src.pipeline: Downloading OHLCV for ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'TSLA', 'F', 'JPM', 'GS', 'AMZN', 'WMT', 'META', 'NFLX']
+2026-04-15 21:01:27,835 INFO src.pipeline: [AAPL] GARCH volatility fit…
+2026-04-15 21:01:28,119 INFO src.pipeline: [AAPL] Linear Regression…
+2026-04-15 21:01:28,120 INFO src.pipeline: [AAPL] Random Forest Regressor…
+2026-04-15 21:01:28,379 INFO src.pipeline: [AAPL] XGBoost Regressor…
+2026-04-15 21:01:28,879 INFO src.pipeline: [AAPL] LightGBM Regressor…
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+2026-04-15 21:01:29,858 INFO src.pipeline: [AAPL] Stacking Ensemble Regressor…
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMRegressor was fitted with feature names
+  warnings.warn(
+2026-04-15 21:01:37,190 INFO src.pipeline: [AAPL] Logistic Regression (crash)…
+2026-04-15 21:01:37,198 INFO src.pipeline: [AAPL] Random Forest Classifier (crash)…
+2026-04-15 21:01:37,613 INFO src.pipeline: [AAPL] XGBoost Classifier (crash)…
+2026-04-15 21:01:37,831 INFO src.pipeline: [AAPL] LightGBM Classifier (crash)…
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+2026-04-15 21:01:38,223 INFO src.pipeline: [AAPL] Stacking Ensemble Classifier (crash)…
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/sklearn/utils/validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+2026-04-15 21:01:40,139 INFO src.pipeline: [AAPL] Backtesting…
+2026-04-15 21:01:40,139 INFO src.pipeline: [AAPL] LSTM training…
+Exception ignored in: <function ResourceTracker.__del__ at 0x108a47380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x1029c3380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x1046a3380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x106d1b380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x103fdb380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x1057b7380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x10405b380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x11016f380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x1081d7380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+Exception ignored in: <function ResourceTracker.__del__ at 0x10412b380>
+Traceback (most recent call last):
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 82, in __del__
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 91, in _stop
+  File "/Applications/anaconda3/lib/python3.13/multiprocessing/resource_tracker.py", line 116, in _stop_locked
+ChildProcessError: [Errno 10] No child processes
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:314: UserWarning: resource_tracker: There appear to be 6 leaked semlock objects to clean up at shutdown
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:314: UserWarning: resource_tracker: There appear to be 8 leaked folder objects to clean up at shutdown
+  warnings.warn(
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_03127e7df73746d094c94359f526e094_7345332e99f54c94901cc7878911c53f: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_03127e7df73746d094c94359f526e094_9b02b1eda46b4608a8d5dc32c846fef8: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_c6fc1a9f8208403b8608b4e05702b7f1_93c71991ac1a42a3a35da1c1eccda03a: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_03127e7df73746d094c94359f526e094_d6e38896d9ca4c83ad709a4108f6415a: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_139562905220419792ecf2f1ec71dfde_4731547a29b84f6c97112d1d65ecdd9b: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_03127e7df73746d094c94359f526e094_70cf024ad71a469ca265e2dfd886cf1e: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_d189b2034be84f4ab67363d8e4b3578f_d36953df2679430fa08d847f072d0216: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")
+/Applications/anaconda3/lib/python3.13/site-packages/joblib/externals/loky/backend/resource_tracker.py:330: UserWarning: resource_tracker: /var/folders/g6/9vkhly710574xm0wf85wynw00000gn/T/joblib_memmapping_folder_16380_03127e7df73746d094c94359f526e094_d9848f13b6c7421ea909a5628ac53757: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(f"resource_tracker: {name}: {e!r}")

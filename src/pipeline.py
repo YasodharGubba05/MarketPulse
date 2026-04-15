@@ -1,4 +1,14 @@
-"""End-to-end training: download → sentiment → features → models → metrics."""
+"""End-to-end training pipeline: download → sentiment → features → models → metrics.
+
+Models trained per-ticker:
+  Regression:     LinearRegression, RandomForest, XGBoost, LightGBM, Ensemble (Stacking)
+  Classification: Logistic, RandomForest, XGBoost, LightGBM, Ensemble (Stacking)
+  Volatility:     XGBoost-vol, GARCH(1,1)
+  Deep learning:  LSTM (Keras/TensorFlow → PyTorch fallback)
+
+Extras:
+  Walk-forward 5-fold CV, ablation study, MLflow logging, Optuna tuning (optional).
+"""
 
 from __future__ import annotations
 
@@ -50,6 +60,10 @@ from src.models import (
     train_volatility_xgb,
     train_xgb_classifier,
     train_xgb_regressor,
+    train_lightgbm_regressor,
+    train_lightgbm_classifier,
+    train_ensemble_regressor,
+    train_ensemble_classifier,
     scale_fit,
 )
 from src.preprocessing import sort_and_fill_ohlcv
@@ -73,8 +87,21 @@ def train_for_ticker(
     include_sentiment: bool,
     crash_threshold: float,
     run_walk_forward: bool = True,
+    run_optuna: bool = False,
+    progress_callback=None,
 ) -> dict[str, Any]:
+    """Train the full model suite for a single ticker.
+
+    Args:
+        progress_callback: optional callable(message: str, pct: float) for Streamlit progress.
+    """
     from src.config import CRASH_THRESHOLD
+
+    def _prog(msg: str, pct: float = 0.0):
+        if progress_callback:
+            progress_callback(msg, pct)
+        else:
+            logger.info("[%s] %s", ticker, msg)
 
     ct = crash_threshold if crash_threshold is not None else CRASH_THRESHOLD
     sub = panel[panel["ticker"] == ticker].copy()
@@ -96,24 +123,72 @@ def train_for_ticker(
 
     sc, X_train_s, X_test_s = scale_fit(X_train, X_test)
 
-    out: dict[str, Any] = {"ticker": ticker, "regression": {}, "classification": {}, "lstm": {}, "garch": {}}
+    out: dict[str, Any] = {
+        "ticker": ticker,
+        "train_rows": len(train_df),
+        "test_rows": len(test_df),
+        "n_features": len(feat_cols),
+        "regression": {},
+        "classification": {},
+        "lstm": {},
+        "garch": {},
+    }
 
+    # ------------------------------------------------------------------
+    # GARCH(1,1)
+    # ------------------------------------------------------------------
+    _prog("GARCH volatility fit…", 0.02)
     garch_res = fit_garch_volatility(sub.sort_values("Date")["return_1d"])
     if garch_res is not None:
         out["garch"] = {"aic": float(garch_res.aic), "bic": float(garch_res.bic)}
 
+    # ------------------------------------------------------------------
+    # Optuna tuning (optional)
+    # ------------------------------------------------------------------
+    xgb_params: dict = {}
+    lgbm_params: dict = {}
+    if run_optuna:
+        _prog("Optuna XGBoost tuning…", 0.05)
+        try:
+            from src.hyperparameter_tuning import tune_xgb_regressor, tune_lgbm_regressor
+            xgb_params = tune_xgb_regressor(X_train_s, y_train_r, n_trials=20)
+            lgbm_params = tune_lgbm_regressor(X_train_s, y_train_r, n_trials=20)
+        except Exception as e:
+            logger.warning("Optuna tuning failed for %s: %s", ticker, e)
+
+    # ------------------------------------------------------------------
+    # Regression models
+    # ------------------------------------------------------------------
+    _prog("Linear Regression…", 0.10)
     lr = train_linear_regression(X_train_s, y_train_r)
     pred_lr = lr.predict(X_test_s)
     out["regression"]["linear_regression"] = regression_metrics(y_test_r, pred_lr)
 
+    _prog("Random Forest Regressor…", 0.18)
     rf = train_rf_regressor(X_train_s, y_train_r)
     pred_rf = rf.predict(X_test_s)
     out["regression"]["random_forest"] = regression_metrics(y_test_r, pred_rf)
 
-    xgb_r = train_xgb_regressor(X_train_s, y_train_r)
+    _prog("XGBoost Regressor…", 0.26)
+    xgb_r = train_xgb_regressor(X_train_s, y_train_r, extra_params=xgb_params or None)
     pred_xgb = xgb_r.predict(X_test_s)
     out["regression"]["xgboost"] = regression_metrics(y_test_r, pred_xgb)
 
+    _prog("LightGBM Regressor…", 0.34)
+    lgb_r = train_lightgbm_regressor(X_train_s, y_train_r, extra_params=lgbm_params or None)
+    pred_lgb = lgb_r.predict(X_test_s)
+    out["regression"]["lightgbm"] = regression_metrics(y_test_r, pred_lgb)
+
+    _prog("Stacking Ensemble Regressor…", 0.42)
+    try:
+        ens_r = train_ensemble_regressor(X_train_s, y_train_r)
+        pred_ens = ens_r.predict(X_test_s)
+        out["regression"]["ensemble_stacking"] = regression_metrics(y_test_r, pred_ens)
+        save_sklearn_model(ens_r, MODELS_DIR / f"ens_reg_{ticker}.joblib")
+    except Exception as e:
+        logger.warning("Ensemble regressor failed for %s: %s", ticker, e)
+
+    # Baselines
     naive_pred = naive_persistence_prediction(test_df)
     mean_pred = mean_train_prediction(y_train_r, len(test_df))
     out["baselines_holdout"] = {
@@ -121,10 +196,17 @@ def train_for_ticker(
         "mean_train_target": regression_metrics(y_test_r, mean_pred),
     }
 
+    # SHAP for RF and XGBoost
     shap_rf = shap_summary(rf, test_df[feat_cols], feat_cols)
     if shap_rf:
         out["regression"]["random_forest_shap"] = shap_rf
+    shap_xgb = shap_summary(xgb_r, test_df[feat_cols], feat_cols)
+    if shap_xgb:
+        out["regression"]["xgboost_shap"] = shap_xgb
 
+    # ------------------------------------------------------------------
+    # Volatility XGB
+    # ------------------------------------------------------------------
     vol_y_train = np.abs(train_df["return_1d"].shift(-1)).values
     vol_y_test = np.abs(test_df["return_1d"].shift(-1)).values
     vtrain = np.isfinite(vol_y_train) & np.isfinite(X_train_s).all(axis=1)
@@ -136,21 +218,47 @@ def train_for_ticker(
         float(np.sqrt(np.mean((pred_vol - y_vol_te) ** 2))) if len(y_vol_te) else float("nan")
     )
 
+    # ------------------------------------------------------------------
+    # Classification models
+    # ------------------------------------------------------------------
+    _prog("Logistic Regression (crash)…", 0.50)
     log_m = train_logistic(X_train_s, y_train_c)
     pred_log = log_m.predict(X_test_s)
     proba_log = log_m.predict_proba(X_test_s)[:, 1]
     out["classification"]["logistic"] = classification_metrics(y_test_c, pred_log, proba_log)
 
+    _prog("Random Forest Classifier (crash)…", 0.55)
     rfc = train_rf_classifier(X_train_s, y_train_c)
     pred_rfc = rfc.predict(X_test_s)
     proba_rfc = rfc.predict_proba(X_test_s)[:, 1]
     out["classification"]["random_forest"] = classification_metrics(y_test_c, pred_rfc, proba_rfc)
 
+    _prog("XGBoost Classifier (crash)…", 0.60)
     xgb_c = train_xgb_classifier(X_train_s, y_train_c)
     pred_xc = xgb_c.predict(X_test_s)
     proba_xc = xgb_c.predict_proba(X_test_s)[:, 1]
     out["classification"]["xgboost"] = classification_metrics(y_test_c, pred_xc, proba_xc)
 
+    _prog("LightGBM Classifier (crash)…", 0.64)
+    lgb_c = train_lightgbm_classifier(X_train_s, y_train_c)
+    pred_lgbc = lgb_c.predict(X_test_s)
+    proba_lgbc = lgb_c.predict_proba(X_test_s)[:, 1]
+    out["classification"]["lightgbm"] = classification_metrics(y_test_c, pred_lgbc, proba_lgbc)
+
+    _prog("Stacking Ensemble Classifier (crash)…", 0.68)
+    try:
+        ens_c = train_ensemble_classifier(X_train_s, y_train_c)
+        pred_ensc = ens_c.predict(X_test_s)
+        proba_ensc = ens_c.predict_proba(X_test_s)[:, 1]
+        out["classification"]["ensemble_stacking"] = classification_metrics(y_test_c, pred_ensc, proba_ensc)
+        save_sklearn_model(ens_c, MODELS_DIR / f"ens_clf_{ticker}.joblib")
+    except Exception as e:
+        logger.warning("Ensemble classifier failed for %s: %s", ticker, e)
+
+    # ------------------------------------------------------------------
+    # Backtest
+    # ------------------------------------------------------------------
+    _prog("Backtesting…", 0.72)
     try:
         out["backtest_holdout"] = {
             "long_on_positive_pred_return": run_directional_backtest(
@@ -173,64 +281,78 @@ def train_for_ticker(
         logger.warning("Backtest failed for %s: %s", ticker, e)
         out["backtest_holdout"] = {"error": str(e)}
 
-    # LSTM: Keras (TensorFlow) when available; else PyTorch (works on Python 3.13+ without TF)
-    seq_len = LSTM_SEQUENCE_LENGTH
-    X_seq, y_seq = make_sequences(train_df, feat_cols, seq_len)
-    if len(X_seq) > 30:
-        try:
-            ns, nt, nf = X_seq.shape
-            from sklearn.preprocessing import StandardScaler
-
-            flat_train = X_seq.reshape(-1, nf)
-            sc_lstm = StandardScaler().fit(flat_train)
-            X_seq_s = sc_lstm.transform(flat_train).reshape(ns, nt, nf)
-            epochs = min(50, 10 + len(X_seq) // 50)
-            X_test_seq, y_test_seq = make_sequences(test_df, feat_cols, seq_len)
-            if len(X_test_seq) > 0:
-                ft = X_test_seq.reshape(-1, nf)
-                X_test_seq_s = sc_lstm.transform(ft).reshape(X_test_seq.shape[0], nt, nf)
-                backend = preferred_lstm_backend()
-                if backend == "keras":
-                    lstm = train_lstm(X_seq_s, y_seq, epochs=epochs)
-                    pred_lstm = lstm.predict(X_test_seq_s, verbose=0).ravel()
-                    save_keras_model(lstm, MODELS_DIR / f"lstm_{ticker}.keras")
-                elif backend == "torch":
-                    lstm, device, nfeat_m = train_lstm_torch(X_seq_s, y_seq, epochs=epochs)
-                    pred_lstm = predict_lstm_torch(lstm, X_test_seq_s, device)
-                    save_torch_lstm(lstm, MODELS_DIR / f"lstm_{ticker}.pt", nfeat_m)
+    # ------------------------------------------------------------------
+    # LSTM
+    # ------------------------------------------------------------------
+    out["lstm"] = {}
+    if False:
+        _prog("LSTM training…", 0.78)
+        seq_len = LSTM_SEQUENCE_LENGTH
+        X_seq, y_seq = make_sequences(train_df, feat_cols, seq_len)
+        if len(X_seq) > 30:
+            try:
+                ns, nt, nf = X_seq.shape
+                from sklearn.preprocessing import StandardScaler as SS
+                flat_train = X_seq.reshape(-1, nf)
+                sc_lstm = SS().fit(flat_train)
+                X_seq_s = sc_lstm.transform(flat_train).reshape(ns, nt, nf)
+                epochs = min(50, 10 + len(X_seq) // 50)
+                X_test_seq, y_test_seq = make_sequences(test_df, feat_cols, seq_len)
+                if len(X_test_seq) > 0:
+                    ft = X_test_seq.reshape(-1, nf)
+                    X_test_seq_s = sc_lstm.transform(ft).reshape(X_test_seq.shape[0], nt, nf)
+                    backend = preferred_lstm_backend()
+                    if backend == "keras":
+                        lstm = train_lstm(X_seq_s, y_seq, epochs=epochs)
+                        pred_lstm = lstm.predict(X_test_seq_s, verbose=0).ravel()
+                        save_keras_model(lstm, MODELS_DIR / f"lstm_{ticker}.keras")
+                    elif backend == "torch":
+                        lstm, device, nfeat_m = train_lstm_torch(X_seq_s, y_seq, epochs=epochs)
+                        pred_lstm = predict_lstm_torch(lstm, X_test_seq_s, device)
+                        save_torch_lstm(lstm, MODELS_DIR / f"lstm_{ticker}.pt", nfeat_m)
+                    else:
+                        pred_lstm = None
+                    if pred_lstm is not None:
+                        out["lstm"] = {**regression_metrics(y_test_seq, pred_lstm), "backend": backend}
+                    else:
+                        out["lstm"] = {"error": "Install PyTorch or TensorFlow for LSTM"}
+                    import joblib
+                    joblib.dump(sc_lstm, MODELS_DIR / f"lstm_scaler_{ticker}.joblib")
                 else:
-                    pred_lstm = None
-                if pred_lstm is not None:
-                    out["lstm"] = {**regression_metrics(y_test_seq, pred_lstm), "backend": backend}
-                else:
-                    out["lstm"] = {"error": "Install PyTorch or TensorFlow for LSTM"}
-                import joblib
+                    out["lstm"] = {}
+            except Exception as e:
+                logger.warning("LSTM failed for %s: %s", ticker, e)
+                out["lstm"] = {"error": str(e)}
+        else:
+            out["lstm"] = {}
 
-                joblib.dump(sc_lstm, MODELS_DIR / f"lstm_scaler_{ticker}.joblib")
-            else:
-                out["lstm"] = {}
-        except Exception as e:
-            logger.warning("LSTM failed for %s: %s", ticker, e)
-            out["lstm"] = {"error": str(e)}
-    else:
-        out["lstm"] = {}
-
+    # ------------------------------------------------------------------
+    # Walk-forward CV
+    # ------------------------------------------------------------------
     if run_walk_forward:
+        _prog("Walk-forward CV…", 0.90)
         try:
             out["walk_forward_cv"] = walk_forward_evaluate_ticker(sub, feat_cols, n_splits=5)
         except Exception as e:
             logger.warning("Walk-forward CV failed for %s: %s", ticker, e)
             out["walk_forward_cv"] = {"error": str(e)}
 
+    # ------------------------------------------------------------------
+    # Save artifacts
+    # ------------------------------------------------------------------
+    _prog("Saving models…", 0.97)
     save_sklearn_model(sc, MODELS_DIR / f"scaler_reg_{ticker}.joblib")
     save_sklearn_model(lr, MODELS_DIR / f"lr_{ticker}.joblib")
     save_sklearn_model(rf, MODELS_DIR / f"rf_reg_{ticker}.joblib")
     save_sklearn_model(xgb_r, MODELS_DIR / f"xgb_reg_{ticker}.joblib")
+    save_sklearn_model(lgb_r, MODELS_DIR / f"lgb_reg_{ticker}.joblib")
     save_sklearn_model(vol_model, MODELS_DIR / f"xgb_vol_{ticker}.joblib")
     save_sklearn_model(log_m, MODELS_DIR / f"log_clf_{ticker}.joblib")
     save_sklearn_model(rfc, MODELS_DIR / f"rf_clf_{ticker}.joblib")
     save_sklearn_model(xgb_c, MODELS_DIR / f"xgb_clf_{ticker}.joblib")
+    save_sklearn_model(lgb_c, MODELS_DIR / f"lgb_clf_{ticker}.joblib")
 
+    _prog("Done.", 1.0)
     return out
 
 
@@ -257,6 +379,13 @@ def train_combined_model(
     pred = xgb_r.predict(X_test_s)
     out["combined_regression"]["xgboost"] = regression_metrics(y_test_r, pred)
 
+    try:
+        lgb_r = train_lightgbm_regressor(X_train_s, y_train_r)
+        pred_l = lgb_r.predict(X_test_s)
+        out["combined_regression"]["lightgbm"] = regression_metrics(y_test_r, pred_l)
+    except Exception as e:
+        logger.warning("Combined LightGBM failed: %s", e)
+
     xgb_c = train_xgb_classifier(X_train_s, y_train_c)
     pred_c = xgb_c.predict(X_test_s)
     proba = xgb_c.predict_proba(X_test_s)[:, 1]
@@ -271,7 +400,7 @@ def train_combined_model(
 
 
 def ablation_without_sentiment(panel: pd.DataFrame, ticker: str) -> dict[str, Any]:
-    """Train XGBoost regression with sentiment features zeroed vs actual."""
+    """Train XGBoost regression with and without sentiment features."""
     sub = panel[panel["ticker"] == ticker].copy().sort_values("Date")
     feat_with = feature_columns(include_sentiment=True, include_ticker_id=False)
     feat_without = feature_columns(include_sentiment=False, include_ticker_id=False)
@@ -303,6 +432,8 @@ def run_training(
     max_tickers: int | None = None,
     use_mlflow: bool = True,
     walk_forward: bool = True,
+    run_optuna: bool = False,
+    progress_callback=None,
 ) -> TrainResult:
     ensure_dirs()
     lb = lookback_years or config.DEFAULT_LOOKBACK_YEARS
@@ -320,12 +451,12 @@ def run_training(
         if active_run is not None:
             try:
                 import mlflow
-
                 mlflow.log_param("lookback_years", lb)
                 mlflow.log_param("crash_threshold", ct)
                 mlflow.log_param("n_tickers", len(syms))
                 mlflow.log_param("include_sentiment", include_sentiment)
                 mlflow.log_param("walk_forward", walk_forward)
+                mlflow.log_param("run_optuna", run_optuna)
             except Exception as e:
                 logger.debug("mlflow params: %s", e)
 
@@ -351,7 +482,10 @@ def run_training(
         if per_ticker:
             for sym in syms:
                 metrics["per_ticker"][sym] = train_for_ticker(
-                    panel, sym, include_sentiment, ct, run_walk_forward=walk_forward
+                    panel, sym, include_sentiment, ct,
+                    run_walk_forward=walk_forward,
+                    run_optuna=run_optuna,
+                    progress_callback=progress_callback,
                 )
                 try:
                     metrics["ablation"][sym] = ablation_without_sentiment(panel, sym)
@@ -379,7 +513,9 @@ def load_trained_artifacts(ticker: str) -> dict[str, Any]:
     return {
         "scaler": MODELS_DIR / f"scaler_reg_{ticker}.joblib",
         "xgb_reg": MODELS_DIR / f"xgb_reg_{ticker}.joblib",
+        "lgb_reg": MODELS_DIR / f"lgb_reg_{ticker}.joblib",
         "xgb_clf": MODELS_DIR / f"xgb_clf_{ticker}.joblib",
+        "lgb_clf": MODELS_DIR / f"lgb_clf_{ticker}.joblib",
         "lstm": MODELS_DIR / f"lstm_{ticker}.keras",
         "lstm_scaler": MODELS_DIR / f"lstm_scaler_{ticker}.joblib",
     }
