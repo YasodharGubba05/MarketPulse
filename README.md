@@ -121,24 +121,10 @@ Select a ticker, inspect forecast next close, volatility, sentiment (VADER in th
 
 After training, open `metrics.json` to compare **per-ticker** regression/classification metrics and **combined** XGBoost scores. Use ablation entries to discuss whether sentiment helped for each symbol.
 
-## Key insights (what to highlight in interviews)
+## Key insights 
 
 - **Leakage control**: Time-based split; targets are **next-day** close and forward returns.
 - **Scalability**: New ticker = YAML row + retrain; combined model uses **ticker_id** for cross-sectional learning.
 - **NLP pragmatics**: Real APIs are rate-limited — the pipeline degrades gracefully (news-only or zero sentiment).
-
-## Limitations
-
-- Market microstructure and corporate actions are simplified; yfinance data can have gaps.
-- Twitter samples may be sparse; sentiment is noisy and **not** causal.
-- LSTM uses **PyTorch** when Keras/TensorFlow is not installed (common on newer Python); FinBERT adds compute and dependency weight.
-- Past performance does not imply future results; this is **research / educational** code.
-
-## Future work
-
-- Walk-forward backtesting and trading costs.
-- Hyperparameter search and calibrated crash probabilities.
-- Alternative text (SEC filings, Reddit) and entity-aware sentiment.
-- Deployment: batch Airflow jobs + model registry (MLflow).
 
 
